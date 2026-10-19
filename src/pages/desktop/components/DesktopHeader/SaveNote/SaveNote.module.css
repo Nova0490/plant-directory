@@ -1,0 +1,11 @@
+.saveNote{
+    display: flex;
+    width: auto;
+    align-items: center;
+}
+.text{
+    font-family: var(--font-sans);
+    color: #68736a;
+    font-weight: 500;
+    font-size: 12px;
+}

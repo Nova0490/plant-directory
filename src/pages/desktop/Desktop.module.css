@@ -1,0 +1,9 @@
+.desktopContent{
+    background: #f5efe4;
+    padding: 0px 80px;
+    min-height: 100vh;
+}
+.main{
+    gap: 34px;
+    padding-top: 44px;
+}

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Код-ревью: шторка и форма — «Домашний гербарий»</title>
+<style>
+  :root {
+    --ink: #1C2921; --muted: #68736A; --bg: #FFFCF5; --panel: #F5EFE4;
+    --accent: #16382A; --warn: #8a5a00; --bad: #a33;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); margin: 0; line-height: 1.55; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: 30px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin-bottom: 28px; }
+  h2 { font-size: 20px; margin: 36px 0 10px; }
+  h3 { font-size: 15px; margin: 20px 0 6px; }
+  .verdict { background: var(--panel); border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 8px; margin: 16px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 18px; font-size: 14px; }
+  th, td { border: 1px solid #D4CDBC; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel); }
+  code, pre { font-family: Consolas, "SF Mono", monospace; }
+  code { background: #ECE7DB; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  pre { background: #1C2921; color: #E9E4D8; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .sev { font-weight: 600; padding: 2px 8px; border-radius: 20px; font-size: 12px; white-space: nowrap; }
+  .sev-high { background: #f3d9d9; color: var(--bad); }
+  .sev-med { background: #f5e8c8; color: var(--warn); }
+  .sev-low { background: #dce8dd; color: var(--accent); }
+  .pos { background: #dce8dd; color: var(--accent); font-weight: 600; }
+  .flow { width: 100%; max-width: 640px; border: 0; }
+  ul { padding-left: 20px; }
+  .muted { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Код-ревью: шторка и форма</h1>
+<div class="sub">Проект «Домашний гербарий» · 2026-10-18 · ревью по состоянию кода на момент проверки (файлы не менялись)</div>
+
+<div class="verdict">
+<b>Общий вердикт:</b> уровень — уверенный <b>junior (Junior+/Junior Middle)</b>. Код читаемый, типизированный, структура компонентов аккуратная, строгий TypeScript и линт проходят чисто. До миддла не хватает: реализации ключевой бизнес-логики (выгрузка данных), валидации, доступности (a11y), единого состояния и тестов. Технические навыки для миддла — на месте; не хватает «доделанности» и системности.
+</div>
+
+<h2>1. Что в проекте и как устроено</h2>
+<p>Vite + React 19 + TypeScript (strict) + react-router. Хранилище — <code>localStorage</code> через модуль <code>src/storage.ts</code> (уже написаны <code>loadPlants</code>, <code>savePlants</code>, <code>generateId</code>, тип-гард <code>isPlant</code>). Форма «Добавить растение» открывается в шторке (drawer), которая живёт в <code>AddPlantButton</code>.</p>
+
+<h3>Поток данных сейчас</h3>
+<svg class="flow" viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема потока данных: шторка и форма не соединены с карточками">
+  <rect x="10" y="10" width="150" height="60" rx="8" fill="#F5EFE4" stroke="#1C2921"/>
+  <text x="85" y="35" text-anchor="middle" font-size="12" fill="#1C2921" font-family="sans-serif">Кнопка</text>
+  <text x="85" y="52" text-anchor="middle" font-size="12" fill="#1C2921" font-family="sans-serif">«Добавить растение»</text>
+  <line x1="160" y1="40" x2="205" y2="40" stroke="#1C2921" stroke-width="2" marker-end="url(#ar)"/>
+  <rect x="210" y="10" width="150" height="60" rx="8" fill="#F5EFE4" stroke="#1C2921"/>
+  <text x="285" y="35" text-anchor="middle" font-size="12" fill="#1C2921" font-family="sans-serif">useDrawer (isOpen)</text>
+  <text x="285" y="52" text-anchor="middle" font-size="12" fill="#1C2921" font-family="sans-serif">эскейп / оверлей</text>
+  <line x1="360" y1="40" x2="405" y2="40" stroke="#1C2921" stroke-width="2" marker-end="url(#ar)"/>
+  <rect x="410" y="10" width="210" height="60" rx="8" fill="#F5EFE4" stroke="#1C2921"/>
+  <text x="515" y="35" text-anchor="middle" font-size="12" fill="#1C2921" font-family="sans-serif">NewPlantForm (useState)</text>
+  <text x="515" y="52" text-anchor="middle" font-size="12" fill="#C00" font-family="sans-serif">submit = console.log ✗</text>
+  <text x="85" y="110" text-anchor="middle" font-size="12" fill="#68736A" font-family="sans-serif">┌─ цель: storage.savePlants ──┐</text>
+  <path d="M 515 70 L 515 130 L 320 130" stroke="#C00" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#arR)"/>
+  <rect x="80" y="115" width="240" height="50" rx="8" fill="#F5EFE4" stroke="#C00"/>
+  <text x="200" y="138" text-anchor="middle" font-size="12" fill="#C00" font-family="sans-serif">localStorage «plants»</text>
+  <text x="200" y="155" text-anchor="middle" font-size="12" fill="#C00" font-family="sans-serif">(никто не пишет)</text>
+  <path d="M 200 165 L 200 185 L 470 185" stroke="#C00" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#arR)"/>
+  <rect x="475" y="165" width="150" height="40" rx="8" fill="#F5EFE4" stroke="#C00"/>
+  <text x="550" y="182" text-anchor="middle" font-size="12" fill="#C00" font-family="sans-serif">CollectionSection</text>
+  <text x="550" y="197" text-anchor="middle" font-size="11" fill="#C00" font-family="sans-serif">5 захардкоженных карточек</text>
+  <defs>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1C2921"/></marker>
+    <marker id="arR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#C00"/></marker>
+  </defs>
+</svg>
+<p class="muted">Красным — разрыв цикла данных: форма не сохраняет, коллекция не читает из хранилища.</p>
+
+<h2>2. Ревью шторки (Drawer + useDrawer)</h2>
+
+<h3>Что хорошо</h3>
+<ul>
+  <li><span class="pos">[+1]</span> Закрытие по <code>Escape</code>, по клику на оверлей, блокировка скролла <code>body</code> через <code>useEffect</code> с очисткой — базовый скелет модального поведения на месте.</li>
+  <li><span class="pos">[+1]</span> Анимации через CSS-классы <code>drawerOpen</code>/<code>overlayOpen</code>, а не inline-стили.</li>
+  <li><span class="pos">[+1]</span> Семантика: <code>&lt;aside role="dialog" aria-modal="true"&gt;</code>, кнопка закрытия с <code>aria-label</code>.</li>
+  <li><span class="pos">[+1]</span> <code>useDrawer</code> — хороший маленький кастомный хук, переиспользуемый.</li>
+  <li><span class="pos">[+1]</span> <code>aria-hidden={!isOpen}</code> на шторке — правильно.</li>
+</ul>
+
+<h3>Проблемы и замечания</h3>
+<table>
+<tr><th>Серьёзность</th><th>Файл</th><th>Что не так</th><th>Как исправить</th></tr>
+<tr><td><span class="sev sev-high">HIGH</span></td><td>Drawer.tsx</td><td><code>aria-modal="true"</code> обещает, что остальное содержимое недоступно — но фокус не запирается в шторке. Tab-клавиша уводит курсор на страницу за шторкой; скринридер читает фон.</td><td>Добавить focus trap: на открытии переводить фокус в шторку, ловить <code>Tab</code> и зацикливать; по закрытии — возвращать фокус на кнопку «Добавить растение».</td></tr>
+<tr><td><span class="sev sev-med">MED</span></td><td>Drawer.tsx</td><td>Шторка <code>translateX(100%)</code> всегда в DOM и всегда в tab-порядке — скринридер и Tab «находят» невидимый диалог.</td><td>Добавить <code>inert</code> (или <code>visibility: hidden</code> + <code>tabindex="-1"</code>) на закрытом состоянии.</td></tr>
+<tr><td><span class="sev sev-med">MED</span></td><td>Drawer.tsx</td><td><code>&lt;div className={styles.overlay} aria-hidden="true" onClick={onClose}&gt;</code> — целый кликабельный div без <code>role</code>. Формально это ок.</td><td class="muted">Второстепенно для срока; можно оставить.</td></tr>
+<tr><td><span class="sev sev-low">LOW</span></td><td>Drawer.module.css</td><td>Дублирование <code>font-size</code> в <code>.title</code>: сначала 18px, потом 30px (последний побеждает).</td><td>Оставить один <code>font-size: 30px</code>; убрать строку 18px.</td></tr>
+<tr><td><span class="sev sev-low">LOW</span></td><td>AddPlantButton.tsx</td><td>Импорты с расширениями <code>.ts</code>/<code>.tsx</code> вперемешку, без кавычек-единообразия; стиль «склеенных» строк.</td><td>Настроить Prettier/ESLint: единый порядок импортов (paths → styles), кавычки, отступы.</td></tr>
+</table>
+
+<h3>Мелочь: заметка о currentTarget</h3>
+<p>В <code>useDrawer</code> функция <code>toggle</code> не используется — не ошибка, но если не нужна, лучше убрать (минус мёртвый код).</p>
+
+<h2>3. Ревью формы (NewPlantForm)</h2>
+
+<h3>Что хорошо</h3>
+<ul>
+  <li><span class="pos">[+1]</span> Один <code>handleChange</code> на все поля — компактно; конвертация <code>interval</code> в <code>Number</code> и дат в timestamp на месте.</li>
+  <li><span class="pos">[+1]</span> Reset работает через <code>setFormData(createInitialForm())</code> — правильное осознание управляемых инпутов.</li>
+  <li><span class="pos">[+1]</span> Счётчик символов <code>{formData.note.length}/240</code>, лимиты <code>maxLength</code> — внимание к UX.</li>
+  <li><span class="pos">[+1]</span> Пустые <code>&lt;p id="nameMsg" ...&gt;</code> — задел под сообщения валидации (пока статичные).</li>
+</ul>
+
+<h3>Критическое: выгрузки данных нет</h3>
+<p><code>handleSubmit</code> только делает <code>console.log('submit', formData)</code>. Форма не сохраняет растение, карточки в коллекции захардкожены. <code>storage.ts</code> уже готов — нужно всего лишь:</p>
+<pre><code>function handleSubmit(e: FormEvent) {
+  e.preventDefault();
+  const plant: Plant = {
+    id: generateId(),
+    name: formData.name.trim(),
+    room: formData.room,
+    interval: formData.interval,
+    lastWatered: formData.lastWatered,
+    note: formData.note.trim() || undefined,
+  };
+  savePlants([...loadPlants(), plant]);
+  onSaved(plant);  // чтобы родитель обновил коллекцию
+  handleReset();
+}</code></pre>
+<p class="muted">Это 6–8 строк. Дальше — поднять состояние коллекции на уровень выше (например, в <code>Desktop</code>), чтобы и форма писала, и секции читали один источник правды.</p>
+
+<h3>Проблемы валидации (реальные баги)</h3>
+<table>
+<tr><th>Серьёзность</th><th>Где</th><th>Что не так</th><th>Как исправить</th></tr>
+<tr><td><span class="sev sev-high">HIGH</span></td><td>lastWatered</td><td>Пустой date-input даёт <code>new Date('').getTime() = NaN</code>. При <code>require</code> браузер блокирует пустой submit, но при «вчера заполнил, сегодня открыл» поле само пустое при открытии — и валидация браузера сработает с кирпичом. Хуже: после <code>NaN</code> — <code>new Date(NaN)</code> вернёт <code>Invalid Date</code> и поле «залипнет».</td><td>В <code>handleChange</code> обрабатывать пустую строку: <code>value ? new Date(value).getTime() : Date.now()</code>; или хранить дату строкой, конвертировать только при submit.</td></tr>
+<tr><td><span class="sev sev-high">HIGH</span></td><td>interval</td><td><code>Number(value)</code> — пустая строка → <code>0</code>, а <code>min={0}</code> разрешает 0. Отрицательные и дробные числа <code>type="number"</code> пропускает (браузер валидирует только при <code>step</code>), и ничего в <code>handleChange</code> это не режет.</td><td>В <code>handleChange</code> для <code>interval</code>: <code>Number.isInteger(v) && v &gt;= 0 && v &lt;= 90</code>, иначе — не обновлять / показать сообщение.</td></tr>
+<tr><td><span class="sev sev-med">MED</span></td><td>date</td><td><code>new Date(...).toISOString().split('T')[0]</code> — срез по UTC. У пользователя в +03:00 «сегодня» может показать вчерашнюю дату в инпуте.</td><td>Форматировать локально: <code>toLocaleDateString('en-CA')</code> (даёт YYYY-MM-DD в локальном времени) или вручную из <code>getFullYear/getMonth/getDate</code>.</td></tr>
+<tr><td><span class="sev sev-med">MED</span></td><td>name</td><td>Подсказка «После trim, обязательное» — а trim в коде не делается, имя с пробелами сохранится как есть; при submit пустая строка из пробелов пройдёт (браузерный <code>required</code> проверяет непустоту, а не отсутствие пробелов).</td><td>Валидировать <code>name.trim()</code> при submit.</td></tr>
+<tr><td><span class="sev sev-low">LOW</span></td><td>все msg-тексты</td><td>Подсказки статичны и видны всегда, даже когда поле валидно. Лучше показывать ошибку только после касания (touched) — это ожидание пользователей.</td><td>Состояние <code>touched</code> на поле или библиотека форм (react-hook-form / Formik).</td></tr>
+</table>
+
+<h3>Замечания по коду формы</h3>
+<ul>
+  <li><span class="sev sev-low">LOW</span> <code>handleChange</code> — тройной тернарник в <code>setFormData</code> трудно читать; лучше вынести в switch или мапу конвертеров.</li>
+  <li><span class="sev sev-low">LOW</span> <code>aria-required="true"</code> дублируется с <code>required</code> — достаточно одного; с <code>required</code> и <code>:user-invalid</code> CSS можно показывать ошибки без JS.</li>
+  <li><span class="sev sev-low">LOW</span> <code>collection</code> и <code>lastWateredDate</code> рассчитаны в render — ок, но при большей форме лучше useMemo.</li>
+</ul>
+
+<h2>4. Среды: типы и хранилище</h2>
+<ul>
+  <li><span class="pos">[+]</span> <code>storage.ts</code> — пример хорошего кода: тип-гард <code>isPlant</code>, обработка ошибок JSON, дефолт <code>[]</code>, <code>generateId</code> с фолбэком. Это уже миддловский уровень.</li>
+  <li><span class="pos">[+]</span> Неточность: <code>savePlants</code> в catch пишет «Failed to load plants» вместо «Failed to save» — мелочь, но внимательность к текстам — маркер.</li>
+  <li><span class="sev sev-med">MED</span> <code>VALID_ROOMS</code> в <code>storage.ts</code> и <code>ROOMS</code> в форме — один и тот же список в двух местах. Если добавишь комнату, сломается один из них. Вынести в один модуль (например, в <code>types.ts</code> или константы).</li>
+  <li><span class="sev sev-med">MED</span> Состояние коллекции нигде не поднято: <code>CollectionSection</code> рендерит 5 копий одной карточки вручную, <code>TodayCareSection</code> — заглушка «3 растения», цифры «07», «27 Aug» — хардкод в <code>Copy.tsx</code>. Всё это должно считаться из единого состояния.</li>
+  <li><span class="sev sev-med">MED</span> <code>CollectionCard.tsx</code> содержит мусорный текст «йцуккеекнкевфы» в статусе и компонент принимает <code>Plant</code> целиком, хотя интервал/дата должны форматироваться, а кнопки «Полито/Редактировать/Удалить» — без логики. Пока это витрина, не данные.</li>
+</ul>
+
+<h2>5. Оценка уровня</h2>
+<table>
+<tr><th>Критерий</th><th>Проявление в проекте</th><th>Оценка</th></tr>
+<tr><td>Читаемость и структура</td><td>Компоненты небольшие, один хук, понятные названия, storage отдельно</td><td class="pos">Хорошо</td></tr>
+<tr><td>Типизация (TS strict)</td><td>Строгий режим, тип-гард, неизбыточность типов</td><td class="pos">Хорошо</td></tr>
+<tr><td>Бизнес-логика</td><td>Выгрузки данных нет, цикл данных разорван</td><td>Пока нет</td></tr>
+<tr><td>Валидация и краевые случаи</td><td>NaN-даты, пробелы в имени, таймзоны — не обработаны</td><td>Слабо</td></tr>
+<tr><td>Доступность / UX</td><td>Базовые атрибуты есть, focus trap и inert нет</td><td>Средне</td></tr>
+<tr><td>Тесты</td><td>Отсутствуют</td><td>Нет</td></tr>
+</table>
+
+<p><b>Итог:</b> <b>Junior+ (или Junior-Middle)</b>. Ты пишешь аккуратный, типизированный код и понимаешь, как работает React-форма — это сильный фундамент. На позиции middle от тебя ждут того же стиля, но чтобы приложение действительно работало от и до: данные сохранялись, валидировались, состояние было единым, доступность соблюдена, а логика покрыта тестами. Это достигается практикой — не «знаниями», которых не хватает.</p>
+
+<h2>6. Дорожная карта до миддла (по шагам, в порядке важности)</h2>
+
+<h3>Шаг 1. Замкнуть цикл данных (1–2 часа)</h3>
+<ol>
+  <li>Поднять коллекцию в состояние <code>Desktop</code> (или <code>App</code>): <code>const [plants, setPlants] = useState&lt;Plant[]&gt;(loadPlants)</code>.</li>
+  <li>Прокинуть <code>onSave</code> в форму; при submit — <code>savePlants</code> + обновление состояния.</li>
+  <li><code>CollectionSection</code> и <code>TodayCareSection</code> рендерить из <code>plants</code>, считая «сегодня поливать» по <code>lastWatered + interval*86400000</code>.</li>
+  <li>Карточку удалить; кнопку «Полито сегодня» — обновлять <code>lastWatered</code>.</li>
+</ol>
+<pre><code>// Desktop.tsx (схема)
+const [plants, setPlants] = useState&lt;Plant[]&gt;(loadPlants);
+const addPlant = (plant: Plant) =&gt; {
+  const next = [...plants, plant];
+  setPlants(next);
+  savePlants(next);
+};
+// &lt;NewPlantForm onSave={addPlant} /&gt;
+// &lt;CollectionSection plants={plants} /&gt;</code></pre>
+
+<h3>Шаг 2. Валидация (2–3 часа)</h3>
+<ol>
+  <li>Показывать ошибки после touched; проверять <code>name.trim()</code>, <code>interval</code> целое 0–90, дату — не в будущем.</li>
+  <li>Обрабатывать пустой date (NaN) — хранить строку до submit.</li>
+  <li>Локальные даты вместо <code>toISOString</code>.</li>
+</ol>
+
+<h3>Шаг 3. Доступность шторки (1–2 часа)</h3>
+<ol>
+  <li>Focus trap + возврат фокуса на кнопку; <code>inert</code> на закрытой шторке.</li>
+  <li>Убрать дубли <code>aria-required</code>/<code>required</code>, подключить <code>:user-invalid</code>.</li>
+</ol>
+
+<h3>Шаг 4. Проектные практики (непрерывно)</h3>
+<ol>
+  <li>Преттиер/ESLint, единые импорты; убрать мёртвый код (<code>toggle</code>, хардкод-цифры).</li>
+  <li>Разнести дублирующиеся списки комнат в один модуль.</li>
+  <li>Тесты на <code>storage.ts</code> (Vitest + Testing Library): добавление, загрузка битых данных, фильтр тип-гарда.</li>
+  <li>Покрыть тестом валидацию формы и цикл «отправил → появилась карточка».</li>
+  <li>git-инициация проекта и коммиты по шагам — чтобы видеть историю и откатываться.</li>
+</ol>
+
+<h3>Шаг 5. Чтобы выглядеть как middle на собеседовании</h3>
+<ul>
+  <li>Уметь объяснить, почему <code>type="reset"</code> не работает на controlled-форме (ты уже знаешь).</li>
+  <li>Уметь объяснить, почему <code>toISOString().split('T')[0]</code> — баг с таймзоной.</li>
+  <li>Уметь объяснить разницу uncontrolled/controlled, когда нужен <code>useMemo</code>/<code>useCallback</code>.</li>
+  <li>Знать React Context vs props drilling vs state-менеджер (для этого проекта Context достаточно).</li>
+  <li>Знать, что такое focus trap, почему <code>aria-modal</code> без него — ложь для скринридеров.</li>
+</ul>
+
+<div class="muted">Отчёт составлен по коду на момент 2026-10-18; правки не вносились. Сборка: <code>tsc -b --noEmit</code> — 0 ошибок; <code>oxlint</code> — 0 предупреждений.</div>
+
+</div>
+</body>
+</html>

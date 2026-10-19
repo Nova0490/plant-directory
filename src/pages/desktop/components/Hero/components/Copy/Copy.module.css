@@ -1,0 +1,61 @@
+.data{
+    color: #ba6549;
+    font-weight: 700;
+    font-size: 11px;
+    font-family: var(--font-sans);
+}
+.title{
+    color: #16382a;
+    font-size: 58px;
+    font-weight: 600;
+    font-family: var(--font-serif);
+}
+.countValue{
+    color: #16382a;
+    font-size: 72px;
+    font-weight: 600;
+    font-family: var(--font-serif);
+}
+.countLabel{
+    color: #16382a;
+    font-size: 18px;
+    font-weight: 500;
+    font-family: var(--font-sans);
+}
+.copy{
+    gap: 18px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+.bodyText{
+    color: #1c2921;
+    font-weight: 400;
+    font-size: 17px;
+    font-family: var(--font-sans);
+}
+.metricAndAction{
+    display: flex;
+    height: auto;
+    width: auto;
+    gap: 28px;
+}
+.countValue{
+    font-weight: 600;
+    font-family: var(--font-serif);
+    font-size: 72px;
+}
+.careActionButton{
+    background-color: #ba6549;
+    width: auto;
+    padding: 15px 20px;
+    height: 52px;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    align-self: flex-end;
+    justify-self: flex-end;
+}
+.count{
+    gap:2px;
+}

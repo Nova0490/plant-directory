@@ -1,0 +1,8 @@
+.collectionSection {
+    /* TODO: добавить стили для секции коллекции */
+}
+.collectionGridCards{
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap
+}

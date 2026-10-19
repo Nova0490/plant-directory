@@ -1,0 +1,16 @@
+.plantDescription{
+    display: flex;
+    justify-content: space-between;
+}
+.collectioText{
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 10px;
+    color: #16382a;
+}
+.specimenNumberText{
+    color: #ba6549;
+    font-weight: 700;
+    font-family: var(--font-sans);
+    font-size: 10px;
+}
